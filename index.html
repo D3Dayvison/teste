@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obter Produto do Tiny</title>
+</head>
+<body>
+
+    <h1>Obter Produto do Tiny</h1>
+    
+    <label for="productId">ID do Produto:</label>
+    <input type="text" id="productId" value="858638489">
+    
+    <button onclick="getProductById()">Obter Produto</button>
+    
+    <h3>Resultado:</h3>
+    <p id="result"></p>
+    
+    <script>
+        const token = 'd60ed795f3c93decf4ff03a88dda5468cd3eeaa8f72a3d754cf706f4ee8dbbab';
+
+        function getProductById() {
+            const id = document.getElementById('productId').value;
+            
+            const data = new URLSearchParams();
+            data.append('token', token);
+            data.append('id', id);
+            data.append('formato', 'json');
+
+            fetch('https://api.tiny.com.br/api2/produto.obter.php', {
+                method: 'POST',
+                body: data
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro na requisição: ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const produto = data.retorno.produto;
+                document.getElementById('result').innerHTML = 
+                    `Nome: ${produto.nome}<br>
+                     Código: ${produto.codigo}<br>
+                     Preço: ${produto.preco}`;
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                document.getElementById('result').textContent = 'Erro ao obter produto.';
+            });
+        }
+    </script>
+
+</body>
+</html>
