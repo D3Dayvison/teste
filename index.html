@@ -1,56 +1,118 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Obter Produto do Tiny</title>
+    <title>Pesquisar Pedido - Tiny</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .pedido-info {
+            margin-top: 20px;
+        }
+        .pedido-info h2 {
+            color: #333;
+        }
+        .pedido-info ul {
+            list-style: none;
+            padding: 0;
+        }
+        .pedido-info ul li {
+            margin-bottom: 10px;
+        }
+        .search-bar {
+            margin-bottom: 20px;
+        }
+        .search-bar input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            width: 300px;
+        }
+        .search-bar button {
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
 
-    <h1>Obter Produto do Tiny</h1>
-    
-    <label for="productId">ID do Produto:</label>
-    <input type="text" id="productId" value="858638489">
-    
-    <button onclick="getProductById()">Obter Produto</button>
-    
-    <h3>Resultado:</h3>
-    <p id="result"></p>
-    
-    <script>
-        const token = 'd60ed795f3c93decf4ff03a88dda5468cd3eeaa8f72a3d754cf706f4ee8dbbab';
+<h1>Pesquisar Pedido</h1>
 
-        function getProductById() {
-            const id = document.getElementById('productId').value;
-            
-            const data = new URLSearchParams();
-            data.append('token', token);
-            data.append('id', id);
-            data.append('formato', 'json');
+<div class="search-bar">
+    <input type="text" id="pedido-id" placeholder="Digite o ID do pedido">
+    <button onclick="pesquisarPedido()">Pesquisar</button>
+</div>
 
-            fetch('https://api.tiny.com.br/api2/produto.obter.php', {
+<div class="pedido-info" id="pedido-info">
+    <h2>Informe o ID do pedido acima e clique em Pesquisar</h2>
+</div>
+
+<script>
+    // Token da API Tiny
+    const token = 'd60ed795f3c93decf4ff03a88dda5468cd3eeaa8f72a3d754cf706f4ee8dbbab';
+
+    // Função para buscar os dados do pedido
+    async function obterPedido(idPedido) {
+        try {
+            const response = await fetch('https://api.tiny.com.br/api2/pedido.obter.php', {
                 method: 'POST',
-                body: data
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro na requisição: ' + response.statusText);
+                body: new URLSearchParams({
+                    token: token,
+                    id: idPedido,
+                    formato: 'json'
+                }),
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
                 }
-                return response.json();
-            })
-            .then(data => {
-                const produto = data.retorno.produto;
-                document.getElementById('result').innerHTML = 
-                    `Nome: ${produto.nome}<br>
-                     Código: ${produto.codigo}<br>
-                     Preço: ${produto.preco}`;
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                document.getElementById('result').textContent = 'Erro ao obter produto.';
             });
+
+            const data = await response.json();
+
+            if (data.retorno.status_processamento === '3') {
+                const pedido = data.retorno.pedido;
+                exibirPedido(pedido);
+            } else {
+                document.getElementById('pedido-info').innerHTML = `<h2>Erro ao obter pedido: ${data.retorno.mensagem}</h2>`;
+            }
+        } catch (error) {
+            document.getElementById('pedido-info').innerHTML = `<h2>Erro ao carregar o pedido</h2>`;
         }
-    </script>
+    }
+
+    // Função para exibir os dados do pedido no HTML
+    function exibirPedido(pedido) {
+        const infoPedido = `
+            <h2>Pedido ID: ${pedido.id}</h2>
+            <ul>
+                <li><strong>Cliente:</strong> ${pedido.cliente.nome}</li>
+                <li><strong>Data do Pedido:</strong> ${pedido.data_pedido}</li>
+                <li><strong>Valor Total:</strong> R$${pedido.valor_total}</li>
+                <li><strong>Status:</strong> ${pedido.status}</li>
+                <li><strong>Produtos:</strong>
+                    <ul>
+                        ${pedido.itens.map(item => `<li>${item.descricao} - Quantidade: ${item.quantidade}</li>`).join('')}
+                    </ul>
+                </li>
+            </ul>
+        `;
+
+        document.getElementById('pedido-info').innerHTML = infoPedido;
+    }
+
+    // Função chamada ao clicar no botão de pesquisa
+    function pesquisarPedido() {
+        const idPedido = document.getElementById('pedido-id').value;
+        if (idPedido) {
+            document.getElementById('pedido-info').innerHTML = '<h2>Carregando informações do pedido...</h2>';
+            obterPedido(idPedido);
+        } else {
+            document.getElementById('pedido-info').innerHTML = '<h2>Por favor, insira o ID do pedido</h2>';
+        }
+    }
+</script>
 
 </body>
 </html>
