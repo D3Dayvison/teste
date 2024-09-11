@@ -137,4 +137,20 @@
             </ul>
         `;
 
-        document.getElemen
+        document.getElementById('pedido-info').innerHTML = infoPedido;
+    }
+
+    // Função chamada ao clicar no botão de pesquisa
+    function pesquisarPedido() {
+        const idPedido = document.getElementById('pedido-id').value;
+        if (idPedido) {
+            document.getElementById('pedido-info').innerHTML = '<h2>Carregando informações do pedido...</h2>';
+            obterPedido(idPedido);
+        } else {
+            document.getElementById('pedido-info').innerHTML = '<h2>Por favor, insira o ID do pedido</h2>';
+        }
+    }
+</script>
+
+</body>
+</html>
