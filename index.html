@@ -1,71 +1,394 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadastro no Firebase</title>
-</head>
-<body>
-  <h1>Cadastro de Nome e CPF</h1>
-  <form id="cadastroForm">
-    <label for="nome">Nome:</label>
-    <input type="text" id="nome" required><br><br>
-    <label for="cpf">CPF:</label>
-    <input type="text" id="cpf" required><br><br>
-    <button type="submit">Cadastrar</button>
-  </form>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <p id="mensagem"></p>
+  <title>Teste Câmera com Janela de Foco</title>
 
-  <script type="module">
-    // Importa os SDKs necessários do Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-    // Configurações do Firebase do seu projeto
-    const firebaseConfig = {
-      apiKey: "AIzaSyCZ0c2cfzHJqgWSasksfH6fly7yvEEVV5A",
-      authDomain: "sorteio-shelf.firebaseapp.com",
-      databaseURL: "https://sorteio-shelf-default-rtdb.firebaseio.com",
-      projectId: "sorteio-shelf",
-      storageBucket: "sorteio-shelf.appspot.com",
-      messagingSenderId: "53773876093",
-      appId: "1:53773876093:web:dff47b7f38fdd19e082a14",
-      measurementId: "G-YFPXCHYEEC"
-    };
+    body {
+      width: 100%;
+      min-height: 100vh;
+      background: #000;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
 
-    // Inicializa o Firebase
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
+    .camera-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      overflow: hidden;
+    }
 
-    // Função para cadastrar dados no Realtime Database
-    async function cadastrar(nome, cpf) {
-      try {
-        const participantesRef = ref(database, 'participantes');
-        const novoParticipanteRef = push(participantesRef);
-        await set(novoParticipanteRef, { nome, cpf });
-        document.getElementById("mensagem").textContent = "Cadastro realizado com sucesso!";
-      } catch (error) {
-        console.error("Erro ao cadastrar:", error);
-        document.getElementById("mensagem").textContent = "Erro ao cadastrar. Tente novamente.";
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #000;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: rgba(0, 0, 0, 0.45);
+    }
+
+    .focus-window {
+      position: absolute;
+      width: 82%;
+      max-width: 420px;
+      height: 230px;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border: 3px solid #00ff88;
+      border-radius: 18px;
+      box-shadow:
+        0 0 0 9999px rgba(0, 0, 0, 0.55),
+        0 0 22px rgba(0, 255, 136, 0.7);
+      pointer-events: none;
+    }
+
+    .focus-window::before,
+    .focus-window::after {
+      content: "";
+      position: absolute;
+      width: 45px;
+      height: 45px;
+      border-color: #fff;
+      border-style: solid;
+    }
+
+    .focus-window::before {
+      top: -3px;
+      left: -3px;
+      border-width: 5px 0 0 5px;
+      border-radius: 18px 0 0 0;
+    }
+
+    .focus-window::after {
+      right: -3px;
+      bottom: -3px;
+      border-width: 0 5px 5px 0;
+      border-radius: 0 0 18px 0;
+    }
+
+    .scan-line {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      top: 20px;
+      height: 3px;
+      background: #00ff88;
+      border-radius: 10px;
+      box-shadow: 0 0 12px #00ff88;
+      animation: scan 2s linear infinite;
+    }
+
+    @keyframes scan {
+      0% {
+        top: 20px;
+      }
+
+      100% {
+        top: calc(100% - 20px);
       }
     }
 
-    // Integração com o formulário
-    document.addEventListener('DOMContentLoaded', () => {
-      const form = document.querySelector('#cadastroForm');
-      form.addEventListener('submit', (e) => {
-        e.preventDefault(); // Previne o recarregamento da página
-        const nome = document.querySelector('#nome').value;
-        const cpf = document.querySelector('#cpf').value;
-        if (nome && cpf) {
-          cadastrar(nome, cpf);
-          form.reset();
-        } else {
-          document.getElementById("mensagem").textContent = "Preencha todos os campos!";
+    .instruction {
+      position: absolute;
+      width: 90%;
+      max-width: 430px;
+      left: 50%;
+      top: calc(45% + 145px);
+      transform: translateX(-50%);
+      color: #fff;
+      font-size: 15px;
+      line-height: 1.4;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.55);
+      padding: 12px 14px;
+      border-radius: 14px;
+      backdrop-filter: blur(8px);
+    }
+
+    .top-bar {
+      position: absolute;
+      top: 18px;
+      left: 14px;
+      right: 14px;
+      z-index: 10;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      text-align: center;
+    }
+
+    .top-title {
+      background: rgba(0, 0, 0, 0.55);
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 700;
+      backdrop-filter: blur(8px);
+    }
+
+    .controls {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 22px;
+      z-index: 20;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+    }
+
+    button {
+      border: none;
+      outline: none;
+      padding: 14px 16px;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #fff;
+      background: #00b894;
+      box-shadow: 0 8px 22px rgba(0, 184, 148, 0.35);
+    }
+
+    button.secondary {
+      background: #222;
+      box-shadow: none;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    button.danger {
+      background: #d63031;
+      box-shadow: 0 8px 22px rgba(214, 48, 49, 0.35);
+    }
+
+    .status {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 88px;
+      z-index: 20;
+      color: #fff;
+      text-align: center;
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    canvas {
+      display: none;
+    }
+
+    .preview {
+      position: absolute;
+      top: 70px;
+      right: 14px;
+      width: 92px;
+      height: 92px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(255, 255, 255, 0.7);
+      display: none;
+      z-index: 30;
+    }
+
+    .preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    @media (max-width: 380px) {
+      .focus-window {
+        height: 200px;
+      }
+
+      .instruction {
+        font-size: 13px;
+        top: calc(45% + 125px);
+      }
+
+      button {
+        font-size: 13px;
+        padding: 12px 13px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="camera-container">
+    <video id="video" autoplay playsinline muted></video>
+
+    <div class="overlay"></div>
+
+    <div class="top-bar">
+      <div class="top-title">Câmera com janela de foco</div>
+    </div>
+
+    <div class="focus-window">
+      <div class="scan-line"></div>
+    </div>
+
+    <div class="instruction">
+      Posicione o objeto dentro da janela verde. A câmera tentará manter o foco automaticamente.
+    </div>
+
+    <div class="preview" id="previewBox">
+      <img id="previewImg" alt="Prévia da foto" />
+    </div>
+
+    <div class="status" id="status">Clique em “Abrir câmera”.</div>
+
+    <div class="controls">
+      <button id="btnStart">Abrir câmera</button>
+      <button id="btnCapture" class="secondary">Capturar</button>
+      <button id="btnStop" class="danger">Parar</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const statusText = document.getElementById("status");
+
+    const btnStart = document.getElementById("btnStart");
+    const btnCapture = document.getElementById("btnCapture");
+    const btnStop = document.getElementById("btnStop");
+
+    const previewBox = document.getElementById("previewBox");
+    const previewImg = document.getElementById("previewImg");
+
+    let streamAtual = null;
+
+    async function abrirCamera() {
+      try {
+        statusText.textContent = "Solicitando acesso à câmera...";
+
+        if (streamAtual) {
+          pararCamera();
         }
-      });
-    });
+
+        const constraints = {
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            focusMode: "continuous"
+          },
+          audio: false
+        };
+
+        streamAtual = await navigator.mediaDevices.getUserMedia(constraints);
+
+        video.srcObject = streamAtual;
+
+        await video.play();
+
+        tentarAtivarFocoContinuo();
+
+        statusText.textContent = "Câmera aberta. Posicione o objeto dentro da janela.";
+      } catch (erro) {
+        console.error(erro);
+
+        if (erro.name === "NotAllowedError") {
+          statusText.textContent = "Permissão negada. Libere o acesso à câmera no navegador.";
+        } else if (erro.name === "NotFoundError") {
+          statusText.textContent = "Nenhuma câmera foi encontrada neste dispositivo.";
+        } else {
+          statusText.textContent = "Erro ao abrir a câmera. Teste em HTTPS ou localhost.";
+        }
+      }
+    }
+
+    async function tentarAtivarFocoContinuo() {
+      try {
+        if (!streamAtual) return;
+
+        const track = streamAtual.getVideoTracks()[0];
+
+        if (!track) return;
+
+        const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+        const settings = track.getSettings ? track.getSettings() : {};
+
+        console.log("Capacidades da câmera:", capabilities);
+        console.log("Configurações atuais:", settings);
+
+        if (capabilities.focusMode && capabilities.focusMode.includes("continuous")) {
+          await track.applyConstraints({
+            advanced: [
+              {
+                focusMode: "continuous"
+              }
+            ]
+          });
+
+          statusText.textContent = "Câmera aberta com foco contínuo ativado.";
+        }
+      } catch (erro) {
+        console.warn("Não foi possível forçar foco contínuo:", erro);
+      }
+    }
+
+    function capturarFoto() {
+      if (!streamAtual || !video.videoWidth || !video.videoHeight) {
+        statusText.textContent = "Abra a câmera antes de capturar.";
+        return;
+      }
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      const ctx = canvas.getContext("2d");
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const imagemBase64 = canvas.toDataURL("image/jpeg", 0.9);
+
+      previewImg.src = imagemBase64;
+      previewBox.style.display = "block";
+
+      statusText.textContent = "Foto capturada com sucesso.";
+
+      console.log("Imagem capturada:", imagemBase64);
+    }
+
+    function pararCamera() {
+      if (streamAtual) {
+        streamAtual.getTracks().forEach(track => track.stop());
+        streamAtual = null;
+      }
+
+      video.srcObject = null;
+      statusText.textContent = "Câmera parada.";
+    }
+
+    btnStart.addEventListener("click", abrirCamera);
+    btnCapture.addEventListener("click", capturarFoto);
+    btnStop.addEventListener("click", pararCamera);
+
+    window.addEventListener("beforeunload", pararCamera);
   </script>
 </body>
 </html>
